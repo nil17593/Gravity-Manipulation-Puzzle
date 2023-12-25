@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace Parodystudios.GravityModificationPuzzle
@@ -26,7 +27,10 @@ namespace Parodystudios.GravityModificationPuzzle
         [SerializeField] private LayerMask groundMask;
         [SerializeField] private float decelerationFactor = 5f;
         [SerializeField] private Transform holoGram;
+        [SerializeField] private Transform holoGramTransform;
         [SerializeField] private float offGroundThreshold = 5f;
+        [SerializeField] private Quaternion rot;
+
 
         #region private variables
         private float turnSmoothVelocity = 0.1f;
@@ -126,9 +130,10 @@ namespace Parodystudios.GravityModificationPuzzle
         // Activate the hologram and set its position and rotation.
         void ActivateHologram(float x, float z)
         {
-            holoGram.transform.SetPositionAndRotation(transform.position + transform.up * 1.807f, transform.rotation * Quaternion.Euler(x, 0, z));
+            holoGram.transform.SetPositionAndRotation(holoGramTransform.position , transform.rotation * Quaternion.Euler(x, 0, z));
             holoGram.gameObject.SetActive(true);
             hologramRotated = true;
+            rot = holoGram.rotation;
         }
 
 
@@ -154,9 +159,32 @@ namespace Parodystudios.GravityModificationPuzzle
             else if (Input.GetKeyDown(KeyCode.Return) && hologramRotated)
             {
                 hologramRotated = false;
-                transform.SetLocalPositionAndRotation(holoGram.position, holoGram.rotation);
                 holoGram.gameObject.SetActive(false);
+
+                StartCoroutine(SmoothTransform(holoGram));
+                //transform.SetLocalPositionAndRotation(holoGram.position, holoGram.rotation);
             }
+        }
+
+        IEnumerator SmoothTransform(Transform targetTransform)
+        {
+            float timeElapsed = 0f;
+            Vector3 startPosition = transform.localPosition;
+            Quaternion startRotation = transform.localRotation;
+
+            while (timeElapsed < .5f)
+            {
+                timeElapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(timeElapsed / .5f);
+
+                transform.localPosition = Vector3.Lerp(startPosition, targetTransform.localPosition, t);
+                transform.localRotation = Quaternion.Lerp(startRotation, rot, t);
+
+                yield return null;
+            }
+
+            transform.localPosition = targetTransform.localPosition;
+            transform.localRotation = rot;
         }
 
         // Apply custom gravity to the character.
